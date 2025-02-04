@@ -1,5 +1,9 @@
 fastapi
 uvicorn
 python-dotenv
+msal
+python-multipart
+itsdangerous
+aiohttp
 
 

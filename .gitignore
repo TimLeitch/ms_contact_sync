@@ -22,7 +22,6 @@ wheels/
 MANIFEST
 
 # Virtual Environment
-.env
 .venv
 env/
 venv/
@@ -61,3 +60,8 @@ db.sqlite3
 tmp/
 temp/
 .temp/
+
+# Environment variables
+.env
+.env.*
+!.env.example
