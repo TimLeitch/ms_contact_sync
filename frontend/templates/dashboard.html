@@ -2,14 +2,59 @@
 <html>
   <head>
     <title>Dashboard - Contact Sync App</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', path='/css/style.css') }}"
+    />
     <script src="https://unpkg.com/htmx.org"></script>
   </head>
   <body>
     <div class="container">
       <h1>Dashboard</h1>
-      <div hx-get="/api/users/list" hx-trigger="load" hx-swap="innerHTML">Loading users...</div>
+      <p>Welcome, {{ user.name }}!</p>
+      <div
+        id="userList"
+        hx-get="/api/users/list"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+      >
+        <p>Loading users...</p>
+      </div>
+      <div id="userListContent" style="display: none">
+        <h2>Users in Organization:</h2>
+        <ul>
+          <template id="user-template">
+            <li class="user-item">
+              <strong class="user-name"></strong>
+              <span class="user-email"></span>
+            </li>
+          </template>
+        </ul>
+      </div>
       <a href="/auth/logout" class="login-button">Logout</a>
     </div>
+
+    <script>
+      document.body.addEventListener("htmx:afterSwap", function (evt) {
+        if (evt.detail.target.id === "userList") {
+          const users = evt.detail.xhr.response;
+          const userList = document.querySelector("#userListContent ul");
+          const template = document.querySelector("#user-template");
+
+          if (users && users.users) {
+            userList.innerHTML = "";
+            users.users.forEach((user) => {
+              const clone = template.content.cloneNode(true);
+              clone.querySelector(".user-name").textContent =
+                user.displayName || "N/A";
+              clone.querySelector(".user-email").textContent =
+                user.userPrincipalName || "";
+              userList.appendChild(clone);
+            });
+            document.querySelector("#userListContent").style.display = "block";
+          }
+        }
+      });
+    </script>
   </body>
 </html>
