@@ -5,5 +5,7 @@ msal
 python-multipart
 itsdangerous
 aiohttp
+jinja2
+starlette
 
 
