@@ -1,11 +1,7 @@
-fastapi
-uvicorn
-python-dotenv
-msal
+fastapi_msal[full]
 python-multipart
-itsdangerous
-aiohttp
 jinja2
-starlette
+uvicorn
+httpx
 
 
