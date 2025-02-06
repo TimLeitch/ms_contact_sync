@@ -1,4 +1,5 @@
 from typing import Optional
+import os
 
 import httpx
 import uvicorn
@@ -10,17 +11,29 @@ from fastapi.templating import Jinja2Templates
 from fastapi_msal import MSALAuthorization, MSALClientConfig
 from fastapi_msal.models import AuthToken
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+
+# Load .env file if it exists (for local development)
+load_dotenv()
 
 
 class AppConfig(MSALClientConfig):
-    login_path: str = "/auth/login"  # default is '/_login_route'
-    logout_path: str = "/auth/logout"  # default is '/_logout_route'
+    def __init__(self):
+        super().__init__(
+            login_path="/auth/login",
+            logout_path="/auth/logout",
+            client_id=os.getenv("MS_CLIENT_ID"),
+            client_credential=os.getenv("MS_CLIENT_SECRET"),
+            tenant=os.getenv("MS_TENANT_ID"),
+            redirect_uri="http://localhost:5000/token"
+        )
 
 
-config = AppConfig(_env_file="app_config.env")
+config = AppConfig()
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=config.client_credential)
+app.add_middleware(SessionMiddleware,
+                   secret_key=os.getenv("SESSION_SECRET_KEY"))
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 auth = MSALAuthorization(client_config=config)
 app.include_router(auth.router)
