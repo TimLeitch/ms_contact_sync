@@ -1,0 +1,31 @@
+<div class="contacts-container">
+  {% if contacts %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for contact in contacts %}
+      <tr>
+        <td>{{ contact.displayName }}</td>
+        <td>
+          {{ contact.emailAddresses[0].address if contact.emailAddresses else ''
+          }}
+        </td>
+        <td>
+          {{ contact.businessPhones[0] if contact.businessPhones else '' }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="no-contacts">
+    <p>No contacts found for this user</p>
+  </div>
+  {% endif %}
+</div>

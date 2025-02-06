@@ -1,148 +1,110 @@
-import uvicorn
-from fastapi import FastAPI, Depends, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi_msal import MSALAuthorization, UserInfo, MSALClientConfig
-from dotenv import load_dotenv
-import os
-from fastapi.responses import RedirectResponse
+from typing import Optional
+
 import httpx
+import uvicorn
+import msal
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi import FastAPI, Request, Query
+from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi_msal import MSALAuthorization, MSALClientConfig
+from fastapi_msal.models import AuthToken
+from fastapi.staticfiles import StaticFiles
 
-load_dotenv()
 
-# Set scopes at class level
-MSALClientConfig.scopes = [
-    "User.Read",
-    "User.Read.All",
-    "Directory.Read.All"  # Add this if you need to read all users
-]
+class AppConfig(MSALClientConfig):
+    login_path: str = "/auth/login"  # default is '/_login_route'
+    logout_path: str = "/auth/logout"  # default is '/_logout_route'
 
-# Configure MSAL
-client_config = MSALClientConfig()
-client_config.client_id = os.getenv("MS_CLIENT_ID")
-client_config.client_credential = os.getenv("MS_CLIENT_SECRET")
-client_config.tenant = os.getenv("MS_TENANT_ID")
-client_config.redirect_uri = "http://localhost:5000/token"
-client_config.login_path = "/auth/login"
-client_config.logout_path = "/auth/logout"
 
+config = AppConfig(_env_file="app_config.env")
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware,
-                   secret_key=os.getenv("SESSION_SECRET_KEY"))
-
-# Static and template setup
+app.add_middleware(SessionMiddleware, secret_key=config.client_credential)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+auth = MSALAuthorization(client_config=config)
+app.include_router(auth.router)
+
+
 templates = Jinja2Templates(directory="frontend/templates")
 
-# Auth setup
-msal_auth = MSALAuthorization(client_config=client_config)
-app.include_router(msal_auth.router)
 
-
-@app.get("/")
-async def home(request: Request):
-    try:
-        # Try to get the user info - if this succeeds, they're authenticated
-        user = await msal_auth.scheme(request)
-        return RedirectResponse(url="/dashboard")
-    except:
-        # If not authenticated, show login page
-        return templates.TemplateResponse("login.html", {"request": request})
-
-
-@app.get("/token")
-async def token_callback(request: Request):
-    try:
-        # Get the user info which includes the token
-        user = await msal_auth.scheme(request)
-        # Debug: Print what we got from MSAL
-        print("User object contents:", dir(user))
-        print("User claims:", user.claims if hasattr(
-            user, 'claims') else "No claims")
-
-        # Try to get token from different possible locations
-        token = None
-        if hasattr(user, 'token'):
-            token = user.token
-        elif hasattr(user, 'access_token'):
-            token = user.access_token
-        elif hasattr(user, '_token'):
-            token = user._token
-        elif hasattr(user, 'aio') and hasattr(user.aio, 'token'):
-            token = user.aio.token
-
-        if token:
-            request.session['access_token'] = token
-            print("Token successfully stored:",
-                  token[:50] if token else "No token")
-        else:
-            print("No token found in user object")
-            # Try to get token from query parameters
-            code = request.query_params.get('code')
-            if code:
-                print("Found authorization code, attempting to get token")
-                # You might need to implement token exchange here
-
-        return RedirectResponse(url="/dashboard")
-    except Exception as e:
-        print(f"Error in token callback: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return RedirectResponse(url="/")
-
-
-@app.get("/dashboard")
-async def dashboard(request: Request, user: UserInfo = Depends(msal_auth.scheme)):
-    # Get user info from claims
-    user_info = {
-        # Fallback to "User" if name not available
-        "name": user.preferred_username or "User",
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    token: Optional[AuthToken] = await auth.get_session_token(request=request)
+    if not token or not token.id_token_claims:
+        return RedirectResponse(url=config.login_path)
+    context = {
+        "request": request,
+        "user": token.id_token_claims,
+        "version": msal.__version__,
     }
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": user_info})
+    return templates.TemplateResponse(name="index.html", context=context)
 
 
-@app.get("/api/users/list")
-async def list_users(request: Request, user: UserInfo = Depends(msal_auth.scheme)):
-    try:
-        # Try to get the token from the MSAL auth context
-        auth_result = await msal_auth.get_token(request)
-        if auth_result and 'access_token' in auth_result:
-            access_token = auth_result['access_token']
-        else:
-            # Fallback to session token
-            access_token = request.session.get('access_token')
+@app.get("/api/users", response_class=HTMLResponse)
+async def get_users(request: Request):
+    token: Optional[AuthToken] = await auth.handler.get_token_from_session(request=request)
+    if not token or not token.access_token:
+        return RedirectResponse(url=config.login_path)
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://graph.microsoft.com/v1.0/users", headers={
+                "Authorization": "Bearer " + token.access_token},
+            params={
+                "$select": "displayName,userPrincipalName,mobilePhone,businessPhones,id"}
+        )
 
-        if not access_token:
-            print("No access token found")
-            return {"error": "No access token available", "status": 401}
+    if resp.status_code != 200:
+        return HTMLResponse(content=f"Error: {resp.status_code} {resp.text}")
 
-        print("Using token (first 50 chars):", access_token[:50])
+    users = resp.json().get("value", [])
 
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
+    return templates.TemplateResponse("users.html", {"request": request, "users": users})
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://graph.microsoft.com/v1.0/users",
-                headers=headers
-            )
 
-            if response.status_code != 200:
-                print("Graph API Error:", response.status_code)
-                print("Response:", response.text)
-                print("Headers sent:", headers)
+@app.get("/api/groups", response_class=HTMLResponse)
+async def get_groups(request: Request):
+    token: Optional[AuthToken] = await auth.handler.get_token_from_session(request=request)
+    if not token or not token.access_token:
+        return RedirectResponse(url=config.login_path)
 
-            return {"users": response.json().get("value", [])} if response.status_code == 200 \
-                else {"error": "Failed to fetch users", "status": response.status_code}
-    except Exception as e:
-        print(f"Error in list_users: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {"error": str(e), "status": 500}
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://graph.microsoft.com/v1.0/groups", headers={
+                "Authorization": "Bearer " + token.access_token},
+            params={"$select": "displayName,id"}
+        )
+
+    if resp.status_code != 200:
+        return HTMLResponse(content=f"Error: {resp.status_code} {resp.text}")
+
+    groups = resp.json().get("value", [])
+
+    return templates.TemplateResponse("groups.html", {"request": request, "groups": groups})
+
+
+@app.get("/api/user/{user_id}/contacts", response_class=HTMLResponse)
+async def get_user_contacts(request: Request, user_id: str):
+    token: Optional[AuthToken] = await auth.handler.get_token_from_session(request=request)
+    if not token or not token.access_token:
+        return RedirectResponse(url=config.login_path)
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"https://graph.microsoft.com/v1.0/users/{user_id}/contacts",
+            headers={"Authorization": "Bearer " + token.access_token}
+        )
+
+    if resp.status_code != 200:
+        return HTMLResponse(content=f"Error: {resp.status_code} {resp.text}")
+
+    contacts = resp.json().get("value", [])
+    return templates.TemplateResponse(
+        "contacts.html",
+        {"request": request, "contacts": contacts}
+    )
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="localhost", port=5000, reload=True)

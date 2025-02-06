@@ -1,0 +1,9 @@
+{% for folder in folders %}
+<button
+  hx-get="/api/contacts?folder={{ folder.id }}"
+  hx-target="#contacts"
+  hx-swap="innerHTML"
+>
+  {{ folder.displayName }}
+</button>
+{% endfor %}
