@@ -1,4 +1,25 @@
 <div class="sidebar">
+  <div class="view-toggle">
+    <button
+      class="toggle-btn active"
+      hx-get="/api/users"
+      hx-target=".sidebar"
+      hx-trigger="click"
+      onclick="setActiveView(this, 'users')"
+    >
+      Users
+    </button>
+    <button
+      class="toggle-btn"
+      hx-get="/api/groups"
+      hx-target=".sidebar"
+      hx-trigger="click"
+      onclick="setActiveView(this, 'groups')"
+    >
+      Groups
+    </button>
+  </div>
+
   <h3>Users</h3>
   <input type="text" placeholder="Search users..." id="userSearch" />
   <ul>
@@ -44,5 +65,13 @@
     const timestamp = new Date().toLocaleTimeString();
     output.innerHTML += `\n[${timestamp}] ${message}`;
     output.scrollTop = output.scrollHeight;
+  }
+
+  function setActiveView(element, view) {
+    document.querySelectorAll(".toggle-btn").forEach((btn) => {
+      btn.classList.remove("active");
+    });
+    element.classList.add("active");
+    logOutput(`Switching to ${view} view...`);
   }
 </script>
