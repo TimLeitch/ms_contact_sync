@@ -112,11 +112,8 @@ async def get_groups(request: Request):
         if not token or not token.access_token:
             return RedirectResponse(url=config.login_path)
 
-        BATCH_SIZE = 20  # Microsoft Graph API batch limit
-        logger.info("Fetching groups from Microsoft Graph API")
-
-        async with httpx.AsyncClient() as client:
-            # First get all groups
+        async with httpx.AsyncClient(timeout=30.0) as client:  # Increased timeout
+            # Get groups first
             resp = await client.get(
                 "https://graph.microsoft.com/v1.0/groups",
                 headers={"Authorization": "Bearer " + token.access_token},
@@ -131,78 +128,136 @@ async def get_groups(request: Request):
                 return HTMLResponse(content="Failed to fetch groups", status_code=resp.status_code)
 
             groups = resp.json().get("value", [])
-            logger.info(
-                f"Found {len(groups)} groups, preparing batch requests")
 
-            # Process groups in chunks
-            for chunk_index, groups_chunk in enumerate(chunk_list(groups, BATCH_SIZE)):
-                logger.info(f"Processing batch {
-                            chunk_index + 1} with {len(groups_chunk)} groups")
+            # Prepare batch request for member counts
+            batch_size = 20  # MS Graph batch limit
+            batch_requests = []
+            request_id_to_group = {}  # Map request IDs to group IDs
 
-                # Create a mapping of request ID to group index
-                id_to_group_index = {
-                    str(i): (chunk_index * BATCH_SIZE) + i
-                    for i, group in enumerate(groups_chunk)
-                }
+            for i, group in enumerate(groups):
+                request_id = f"request-{i}"  # Create unique request ID
+                request_id_to_group[request_id] = group["id"]
+                batch_requests.append({
+                    "id": request_id,
+                    "method": "GET",
+                    "url": f"/groups/{group['id']}/members/$count",
+                    "headers": {
+                        "ConsistencyLevel": "eventual"
+                    }
+                })
 
-                batch_requests = {
-                    "requests": [
-                        {
-                            # This ID will match with the response
-                            "id": str(i),
-                            "method": "GET",
-                            "url": f"/groups/{group['id']}/members?$count=true&$select=id,displayName,userPrincipalName",
-                            "headers": {
-                                "ConsistencyLevel": "eventual"
-                            }
-                        }
-                        for i, group in enumerate(groups_chunk)
-                    ]
-                }
+            # Send batch requests in chunks with retry logic
+            for batch_chunk in chunk_list(batch_requests, batch_size):
+                try:
+                    batch_resp = await client.post(
+                        "https://graph.microsoft.com/v1.0/$batch",
+                        headers={
+                            "Authorization": "Bearer " + token.access_token,
+                        },
+                        json={"requests": batch_chunk},
+                        timeout=30.0  # Explicit timeout for batch request
+                    )
 
-                batch_resp = await client.post(
-                    "https://graph.microsoft.com/v1.0/$batch",
-                    headers={
-                        "Authorization": "Bearer " + token.access_token,
-                        "Content-Type": "application/json"
-                    },
-                    json=batch_requests
-                )
+                    if batch_resp.status_code != 200:
+                        logger.error(f"Batch request failed: {
+                                     batch_resp.status_code} - {batch_resp.text}")
+                        # Set default member count for failed batch
+                        for req in batch_chunk:
+                            group_id = request_id_to_group.get(req["id"])
+                            if group_id:
+                                group = next(
+                                    (g for g in groups if g["id"] == group_id), None)
+                                if group:
+                                    group["memberCount"] = "Error"
+                        continue
 
-                if batch_resp.status_code == 200:
                     batch_results = batch_resp.json().get("responses", [])
-                    logger.info(f"Received {len(batch_results)} responses for batch {
-                                chunk_index + 1}")
 
-                    # Update groups using the request ID mapping
-                    for result in batch_results:
-                        request_id = result.get("id")
-                        group_index = id_to_group_index[request_id]
-                        if result.get("status") == 200:
-                            response_body = result.get("body", {})
-                            groups[group_index]["memberCount"] = response_body.get(
-                                "@odata.count", 0)
-                            groups[group_index]["members"] = response_body.get(
-                                "value", [])
-                            logger.debug(f"Group {groups[group_index]['displayName']} has {
-                                         groups[group_index]['memberCount']} members")
-                        else:
-                            logger.warning(f"Failed to get members for group {
-                                           groups[group_index]['displayName']}: {result.get('status')}")
-                            groups[group_index]["memberCount"] = 0
-                            groups[group_index]["members"] = []
-                else:
-                    logger.error(
-                        f"Batch {chunk_index + 1} failed: {batch_resp.status_code} - {batch_resp.text}")
+                    # Update groups with member counts using request ID mapping
+                    for response in batch_results:
+                        request_id = response["id"]
+                        group_id = request_id_to_group.get(request_id)
 
-        return templates.TemplateResponse("groups.html", {
-            "request": request,
-            "groups": groups
-        })
+                        if not group_id:
+                            logger.error(
+                                f"Unknown request ID received: {request_id}")
+                            continue
+
+                        if response["status"] == 200:
+                            group = next(
+                                (g for g in groups if g["id"] == group_id), None)
+                            if group:
+                                group["memberCount"] = int(response["body"])
+                            else:
+                                logger.error(
+                                    f"Could not find group for ID: {group_id}")
+
+                except httpx.ReadTimeout:
+                    logger.error("Timeout during batch request")
+                    # Set default member count for timed out batch
+                    for req in batch_chunk:
+                        group_id = request_id_to_group.get(req["id"])
+                        if group_id:
+                            group = next(
+                                (g for g in groups if g["id"] == group_id), None)
+                            if group:
+                                group["memberCount"] = "Timeout"
+                    continue
+
+            return templates.TemplateResponse("groups.html", {
+                "request": request,
+                "groups": groups
+            })
 
     except Exception as e:
         logger.exception("Error in get_groups endpoint")
         return HTMLResponse(content=f"Server error: {str(e)}", status_code=500)
+
+
+@app.get("/api/groups/{group_id}/members", response_class=HTMLResponse)
+async def get_group_members(request: Request, group_id: str):
+    try:
+        token: Optional[AuthToken] = await auth.get_session_token(request=request)
+        if not token or not token.access_token:
+            return RedirectResponse(url=config.login_path)
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://graph.microsoft.com/v1.0/groups/{group_id}/members",
+                headers={
+                    "Authorization": "Bearer " + token.access_token,
+                    "ConsistencyLevel": "eventual"
+                },
+                params={
+                    "$select": "id,displayName,userPrincipalName,mobilePhone,businessPhones"
+                }
+            )
+
+            if resp.status_code != 200:
+                error_msg = f"Failed to fetch members: {
+                    resp.status_code} - {resp.text}"
+                logger.error(error_msg)
+                return templates.TemplateResponse("group_members.html", {
+                    "request": request,
+                    "members": [],
+                    "error": error_msg
+                })
+
+            members = resp.json().get("value", [])
+            logger.info(f"Successfully fetched {len(members)} members")
+            return templates.TemplateResponse("group_members.html", {
+                "request": request,
+                "members": members
+            })
+
+    except Exception as e:
+        error_msg = f"Error fetching group members: {str(e)}"
+        logger.exception(error_msg)
+        return templates.TemplateResponse("group_members.html", {
+            "request": request,
+            "members": [],
+            "error": error_msg
+        })
 
 
 @app.get("/api/user/{user_id}/contacts", response_class=HTMLResponse)

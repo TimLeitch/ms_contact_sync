@@ -1,0 +1,33 @@
+<h3>Group Members</h3>
+<div class="member-list">
+  {% if error %}
+  <div class="error-message">{{ error }}</div>
+  <script>
+    logOutput("Error: {{ error }}");
+  </script>
+  {% else %} {% if members %} {% for member in members %}
+  <div class="member-item">
+    <div class="member-info">
+      <span class="member-name">{{ member.displayName }}</span>
+      <span class="member-email"
+        >{{ member.userPrincipalName or "No email" }}</span
+      >
+      {% if member.mobilePhone or member.businessPhones %}
+      <span class="member-phone">
+        {{ member.mobilePhone or (member.businessPhones[0] if
+        member.businessPhones else "No phone") }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  <script>
+    logOutput("Loaded {{ members|length }} members");
+  </script>
+  {% else %}
+  <div>No members found</div>
+  {% endif %} {% endif %}
+</div>
+
+<!-- Debug info -->
+<div style="display: none">{{ members|tojson }}</div>
