@@ -70,7 +70,7 @@ async def index(request: Request):
 @app.get("/api/users", response_class=HTMLResponse)
 async def get_users(request: Request):
     try:
-        token: Optional[AuthToken] = await auth.handler.get_token_from_session(request=request)
+        token: Optional[AuthToken] = await auth.get_session_token(request=request)
         if not token or not token.access_token:
             return RedirectResponse(url=config.login_path)
 
@@ -108,7 +108,7 @@ def chunk_list(lst, chunk_size):
 @app.get("/api/groups", response_class=HTMLResponse)
 async def get_groups(request: Request):
     try:
-        token: Optional[AuthToken] = await auth.handler.get_token_from_session(request=request)
+        token: Optional[AuthToken] = await auth.get_session_token(request=request)
         if not token or not token.access_token:
             return RedirectResponse(url=config.login_path)
 
@@ -139,9 +139,16 @@ async def get_groups(request: Request):
                 logger.info(f"Processing batch {
                             chunk_index + 1} with {len(groups_chunk)} groups")
 
+                # Create a mapping of request ID to group index
+                id_to_group_index = {
+                    str(i): (chunk_index * BATCH_SIZE) + i
+                    for i, group in enumerate(groups_chunk)
+                }
+
                 batch_requests = {
                     "requests": [
                         {
+                            # This ID will match with the response
                             "id": str(i),
                             "method": "GET",
                             "url": f"/groups/{group['id']}/members?$count=true&$select=id,displayName,userPrincipalName",
@@ -167,9 +174,10 @@ async def get_groups(request: Request):
                     logger.info(f"Received {len(batch_results)} responses for batch {
                                 chunk_index + 1}")
 
-                    # Update groups with member counts and store members
-                    for i, result in enumerate(batch_results):
-                        group_index = (chunk_index * BATCH_SIZE) + i
+                    # Update groups using the request ID mapping
+                    for result in batch_results:
+                        request_id = result.get("id")
+                        group_index = id_to_group_index[request_id]
                         if result.get("status") == 200:
                             response_body = result.get("body", {})
                             groups[group_index]["memberCount"] = response_body.get(
@@ -200,7 +208,7 @@ async def get_groups(request: Request):
 @app.get("/api/user/{user_id}/contacts", response_class=HTMLResponse)
 async def get_user_contacts(request: Request, user_id: str):
     try:
-        token: Optional[AuthToken] = await auth.handler.get_token_from_session(request=request)
+        token: Optional[AuthToken] = await auth.get_session_token(request=request)
         if not token or not token.access_token:
             return RedirectResponse(url=config.login_path)
 
