@@ -17,7 +17,12 @@
     </nav>
 
     <div class="container">
-      <div id="user-list" hx-get="/api/users" hx-trigger="load"></div>
+      <div
+        id="left-sidebar"
+        class="left-sidebar"
+        hx-get="/api/users"
+        hx-trigger="load"
+      ></div>
       <div class="content-wrapper">
         <div class="content-top" id="sync-list">
           <h2>Current Sync List</h2>
@@ -25,7 +30,7 @@
         </div>
         <div class="content-bottom" id="contact-details">
           <div class="select-prompt">
-            <h2>Select a user to view their contacts</h2>
+            <h2>Select a user to view their folders</h2>
           </div>
         </div>
       </div>

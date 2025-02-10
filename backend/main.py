@@ -28,6 +28,10 @@ class AppConfig(MSALClientConfig):
         "User.Read.All",
         "Directory.Read.All",
         "Contacts.Read",
+        "Contacts.ReadWrite",
+        "Contacts.ReadWrite.Shared",
+        "Directory.Read.All",
+
     ]
 
     def __init__(self):
@@ -103,6 +107,87 @@ def chunk_list(lst, chunk_size):
     lst = list(lst)
     for i in range(0, len(lst), chunk_size):
         yield lst[i:i + chunk_size]
+
+
+@app.get("/api/users/{user_id}/folders", response_class=HTMLResponse)
+async def get_user_folders(request: Request, user_id: str):
+    logger.info(f"Starting get_user_folders request for user_id: {user_id}")
+    try:
+        token: Optional[AuthToken] = await auth.get_session_token(request=request)
+        if not token:
+            logger.warning("No token found in session")
+            return RedirectResponse(url=config.login_path)
+
+        # Add detailed token inspection
+        logger.info("Token details:")
+        logger.info(f"Scopes: {token.scope}")
+        if hasattr(token, 'id_token_claims'):
+            logger.info(f"Claims: {token.id_token_claims}")
+
+        # Try both endpoints to see which one responds
+        async with httpx.AsyncClient() as client:
+            # Try the beta endpoint to see if it gives more info
+            beta_resp = await client.get(
+                f"https://graph.microsoft.com/beta/users/{user_id}/contactFolders",
+                headers={
+                    "Authorization": f"Bearer {token.access_token}",
+                    "ConsistencyLevel": "eventual"
+                }
+            )
+            logger.info(f"Beta API Response: {beta_resp.status_code}")
+            logger.info(f"Beta Response Body: {beta_resp.text}")
+
+            # Try the v1.0 endpoint
+            v1_resp = await client.get(
+                f"https://graph.microsoft.com/v1.0/users/{user_id}/contactFolders",
+                headers={
+                    "Authorization": f"Bearer {token.access_token}",
+                    "ConsistencyLevel": "eventual"
+                }
+            )
+            logger.info(f"V1 API Response: {v1_resp.status_code}")
+            logger.info(f"V1 Response Body: {v1_resp.text}")
+
+        folders = resp.json().get("value", [])
+        logger.info(f"Successfully retrieved {len(folders)} folders")
+        logger.debug(f"Folders data: {folders}")
+
+        return templates.TemplateResponse(
+            "folders.html",
+            {"request": request, "folders": folders}
+        )
+
+    except Exception as e:
+        logger.exception(
+            f"Unexpected error in get_user_folders for user {user_id}")
+        return HTMLResponse(content=f"Server error: {str(e)}", status_code=500)
+
+
+@app.get("/api/user/{user_id}/contacts", response_class=HTMLResponse)
+async def get_user_contacts(request: Request, user_id: str):
+    try:
+        token: Optional[AuthToken] = await auth.get_session_token(request=request)
+        if not token or not token.access_token:
+            return RedirectResponse(url=config.login_path)
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://graph.microsoft.com/v1.0/users/{user_id}/contacts",
+                headers={"Authorization": "Bearer " + token.access_token}
+            )
+
+        if resp.status_code != 200:
+            logger.error(f"Graph API error: {resp.status_code} - {resp.text}")
+            return HTMLResponse(content=f"Error: {resp.status_code} {resp.text}")
+
+        contacts = resp.json().get("value", [])
+        return templates.TemplateResponse(
+            "contacts.html",
+            {"request": request, "contacts": contacts}
+        )
+    except Exception as e:
+        logger.exception("Error fetching contacts")
+        return HTMLResponse(content=f"Server error: {str(e)}", status_code=500)
 
 
 @app.get("/api/groups", response_class=HTMLResponse)
@@ -258,33 +343,6 @@ async def get_group_members(request: Request, group_id: str):
             "members": [],
             "error": error_msg
         })
-
-
-@app.get("/api/user/{user_id}/contacts", response_class=HTMLResponse)
-async def get_user_contacts(request: Request, user_id: str):
-    try:
-        token: Optional[AuthToken] = await auth.get_session_token(request=request)
-        if not token or not token.access_token:
-            return RedirectResponse(url=config.login_path)
-
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"https://graph.microsoft.com/v1.0/users/{user_id}/contacts",
-                headers={"Authorization": "Bearer " + token.access_token}
-            )
-
-        if resp.status_code != 200:
-            logger.error(f"Graph API error: {resp.status_code} - {resp.text}")
-            return HTMLResponse(content=f"Error: {resp.status_code} {resp.text}")
-
-        contacts = resp.json().get("value", [])
-        return templates.TemplateResponse(
-            "contacts.html",
-            {"request": request, "contacts": contacts}
-        )
-    except Exception as e:
-        logger.exception("Error fetching contacts")
-        return HTMLResponse(content=f"Server error: {str(e)}", status_code=500)
 
 
 if __name__ == "__main__":

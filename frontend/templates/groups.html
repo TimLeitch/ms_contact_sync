@@ -4,7 +4,7 @@
       class="toggle-btn"
       onclick="setActiveView(this, 'users')"
       hx-get="/api/users"
-      hx-target="#content"
+      hx-target=".sidebar"
     >
       Users
     </button>
@@ -12,7 +12,7 @@
       class="toggle-btn active"
       onclick="setActiveView(this, 'groups')"
       hx-get="/api/groups"
-      hx-target="#content"
+      hx-target=".sidebar"
     >
       Groups
     </button>
