@@ -55,6 +55,7 @@ async def get_user_folders(request: Request, user_id: str):
         if not token:
             logger.warning("No token found in session")
             return RedirectResponse(url=config.login_path)
+        logger.info(f"Fetching folders for user: {user_id}")
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(

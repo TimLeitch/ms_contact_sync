@@ -6,7 +6,9 @@
     hx-target="#details"
     hx-trigger="click"
     class="user-item"
-    onclick="setActiveUser(this)"
+    onmouseover="showUserPopup(this, '{{ user.id }}')"
+    onmouseout="hideUserPopup(this)"
+    onclick="handleUserClick(this, '{{ user.id }}')"
   >
     <div class="user-info">
       <span class="user-name">{{ user.displayName }}</span>
@@ -14,11 +16,45 @@
       <span class="user-phone">Mobile: {{ user.mobilePhone if user.mobilePhone else 'N/A' }}</span>
       <span class="user-phone">Business: {{ user.businessPhones[0] if user.businessPhones else 'N/A' }}</span>
     </div>
+    <div class="user-popup" id="popup-{{ user.id }}">
+      <div class="popup-content">
+        <div class="popup-header">
+          <h4>{{ user.displayName }}</h4>
+          <button onclick="closePopup(event, '{{ user.id }}')" class="close-btn">&times;</button>
+        </div>
+        <div class="popup-body" hx-get="/api/users/{{ user.id }}/details" hx-trigger="load"></div>
+      </div>
+    </div>
   </li>
   {% endfor %}
 </ul>
 
 <script>
+  function showUserPopup(element, userId) {
+    if (!element.querySelector(".user-popup").classList.contains("active")) {
+      element.querySelector(".user-popup").classList.add("preview");
+    }
+  }
+
+  function hideUserPopup(element) {
+    if (!element.querySelector(".user-popup").classList.contains("active")) {
+      element.querySelector(".user-popup").classList.remove("preview");
+    }
+  }
+
+  function handleUserClick(element, userId) {
+    setActiveUser(element);
+    const popup = element.querySelector(".user-popup");
+    popup.classList.remove("preview");
+    popup.classList.add("active");
+  }
+
+  function closePopup(event, userId) {
+    event.stopPropagation();
+    const popup = document.getElementById(`popup-${userId}`);
+    popup.classList.remove("active");
+  }
+
   function setActiveUser(element) {
     document.querySelectorAll(".user-item").forEach((el) => {
       el.classList.remove("active");
@@ -27,3 +63,66 @@
     logOutput(`Loading contacts for ${element.querySelector(".user-name").textContent}...`);
   }
 </script>
+
+<style>
+  .user-item {
+    position: relative;
+  }
+
+  .user-popup {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 10px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    z-index: 1000;
+  }
+
+  .user-popup.preview {
+    display: block;
+    pointer-events: none;
+    max-height: 200px;
+    overflow: hidden;
+  }
+
+  .user-popup.active {
+    display: block;
+    pointer-events: all;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .popup-content {
+    padding: 15px;
+  }
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .popup-header h4 {
+    margin: 0;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 5px;
+  }
+
+  .close-btn:hover {
+    color: #666;
+  }
+</style>
