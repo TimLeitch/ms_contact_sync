@@ -1,44 +1,19 @@
-<div class="sidebar">
-  <div class="view-toggle">
-    <button
-      class="toggle-btn"
-      onclick="setActiveView(this, 'users')"
-      hx-get="/api/users"
-      hx-target=".sidebar"
-    >
-      Users
-    </button>
-    <button
-      class="toggle-btn active"
-      onclick="setActiveView(this, 'groups')"
-      hx-get="/api/groups"
-      hx-target=".sidebar"
-    >
-      Groups
-    </button>
-  </div>
-
-  <h3>Groups</h3>
-  <ul>
-    {% for group in groups %}
-    <li
-      class="user-item"
-      hx-get="/api/groups/{{ group.id }}/members"
-      hx-target="#contact-details"
-      onclick="setActiveGroup(this, '{{ group.displayName }}')"
-    >
-      <div class="user-info">
-        <span class="user-name">{{ group.displayName }}</span>
-        <span class="user-email">Members: {{ group.memberCount }}</span>
-      </div>
-    </li>
-    {% endfor %}
-  </ul>
-</div>
-
-<div id="details-container">
-  <h3 id="details-title">Select a Group to View its Members</h3>
-</div>
+<h3>Groups</h3>
+<ul>
+  {% for group in groups %}
+  <li
+    class="user-item"
+    hx-get="/api/groups/{{ group.id }}/members"
+    hx-target="#details"
+    onclick="setActiveGroup(this, '{{ group.displayName }}')"
+  >
+    <div class="user-info">
+      <span class="user-name">{{ group.displayName }}</span>
+      <span class="user-email">Members: {{ group.memberCount }}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
 
 <style>
   .member-item {
@@ -62,27 +37,11 @@
 </style>
 
 <script>
-  // Update the title immediately when the groups view loads
-  document.addEventListener("DOMContentLoaded", function () {
-    const detailsTitle = document.querySelector("#details-title");
-    if (detailsTitle) {
-      detailsTitle.textContent = "Select a Group to View its Members";
-    }
-  });
-
   function setActiveGroup(element, groupName) {
     document.querySelectorAll(".user-item").forEach((el) => {
       el.classList.remove("active");
     });
     element.classList.add("active");
     logOutput(`Loading members for group: ${groupName}`);
-  }
-
-  function setActiveView(element, view) {
-    document.querySelectorAll(".toggle-btn").forEach((btn) => {
-      btn.classList.remove("active");
-    });
-    element.classList.add("active");
-    logOutput(`Switched to ${view} view`);
   }
 </script>

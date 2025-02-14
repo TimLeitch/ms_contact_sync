@@ -1,50 +1,22 @@
-<div class="sidebar">
-  <div class="view-toggle">
-    <button
-      class="toggle-btn active"
-      hx-get="/api/users"
-      hx-target=".sidebar"
-      hx-trigger="click"
-      onclick="setActiveView(this, 'users')"
-    >
-      Users
-    </button>
-    <button
-      class="toggle-btn"
-      hx-get="/api/groups"
-      hx-target=".sidebar"
-      hx-trigger="click"
-      onclick="setActiveView(this, 'groups')"
-    >
-      Groups
-    </button>
-  </div>
-
-  <h3>Users</h3>
-  <ul>
-    {% for user in users %}
-    <li
-      hx-get="/api/users/{{ user.id }}/folders"
-      hx-target="#contact-details"
-      hx-trigger="click"
-      class="user-item"
-      onclick="setActiveUser(this)"
-    >
-      <div class="user-info">
-        <span class="user-name">{{ user.displayName }}</span>
-        <span class="user-email">{{ user.userPrincipalName }}</span>
-        <span class="user-phone"
-          >Mobile: {{ user.mobilePhone if user.mobilePhone else 'N/A' }}</span
-        >
-        <span class="user-phone"
-          >Business: {{ user.businessPhones[0] if user.businessPhones else 'N/A'
-          }}</span
-        >
-      </div>
-    </li>
-    {% endfor %}
-  </ul>
-</div>
+<h3>Users</h3>
+<ul>
+  {% for user in users %}
+  <li
+    hx-get="/api/users/{{ user.id }}/folders"
+    hx-target="#details"
+    hx-trigger="click"
+    class="user-item"
+    onclick="setActiveUser(this)"
+  >
+    <div class="user-info">
+      <span class="user-name">{{ user.displayName }}</span>
+      <span class="user-email">{{ user.userPrincipalName }}</span>
+      <span class="user-phone">Mobile: {{ user.mobilePhone if user.mobilePhone else 'N/A' }}</span>
+      <span class="user-phone">Business: {{ user.businessPhones[0] if user.businessPhones else 'N/A' }}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
 
 <script>
   function setActiveUser(element) {
@@ -52,25 +24,6 @@
       el.classList.remove("active");
     });
     element.classList.add("active");
-    logOutput(
-      `Loading contacts for ${
-        element.querySelector(".user-name").textContent
-      }...`
-    );
-  }
-
-  function logOutput(message) {
-    const output = document.getElementById("output-log");
-    const timestamp = new Date().toLocaleTimeString();
-    output.innerHTML += `\n[${timestamp}] ${message}`;
-    output.scrollTop = output.scrollHeight;
-  }
-
-  function setActiveView(element, view) {
-    document.querySelectorAll(".toggle-btn").forEach((btn) => {
-      btn.classList.remove("active");
-    });
-    element.classList.add("active");
-    logOutput(`Switching to ${view} view...`);
+    logOutput(`Loading contacts for ${element.querySelector(".user-name").textContent}...`);
   }
 </script>

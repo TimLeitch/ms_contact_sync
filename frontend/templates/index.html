@@ -2,10 +2,7 @@
 <html>
   <head>
     <title>MS Contact Sync</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', path='css/styles.css') }}"
-    />
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}" />
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   </head>
   <body>
@@ -17,20 +14,51 @@
     </nav>
 
     <div class="container">
-      <div
-        id="left-sidebar"
-        class="left-sidebar"
-        hx-get="/api/users"
-        hx-trigger="load"
-      ></div>
-      <div class="content-wrapper">
-        <div class="content-top" id="sync-list">
-          <h2>Current Sync List</h2>
-          <!-- Sync list content will go here -->
+      <div id="left-sidebar" class="left-sidebar">
+        <div class="view-toggle">
+          <button
+            class="toggle-btn active"
+            hx-get="/api/users"
+            hx-target="#sidebar-content"
+            hx-trigger="click"
+            onclick="setActiveView(this, 'users')"
+          >
+            Users
+          </button>
+          <button
+            class="toggle-btn"
+            hx-get="/api/groups"
+            hx-target="#sidebar-content"
+            hx-trigger="click"
+            onclick="setActiveView(this, 'groups')"
+          >
+            Groups
+          </button>
         </div>
-        <div class="content-bottom" id="contact-details">
-          <div class="select-prompt">
-            <h2>Select a user to view their folders</h2>
+        <div id="sidebar-content" hx-get="/api/users" hx-trigger="load"></div>
+      </div>
+      <div class="content-wrapper">
+        <div class="section-container">
+          <div class="content-menu">
+            <button class="menu-btn" onclick="logOutput('Adding to sync list...')">Add to Sync</button>
+            <button class="menu-btn" onclick="logOutput('Removing from sync list...')">Remove</button>
+          </div>
+          <div class="content-top" id="info">
+            <h2>Current Sync List</h2>
+          </div>
+        </div>
+
+        <div class="section-container">
+          <div class="content-menu">
+            <button class="menu-btn" onclick="logOutput('Starting sync...')" hx-post="/api/sync" hx-target="#details">
+              Sync Selected
+            </button>
+            <button class="menu-btn" onclick="logOutput('Clearing selection...')">Clear Selection</button>
+          </div>
+          <div class="content-bottom" id="details">
+            <div class="select-prompt">
+              <h2>Select a user to view their folders</h2>
+            </div>
           </div>
         </div>
       </div>
@@ -49,6 +77,21 @@ Waiting for user interaction...
         const timestamp = new Date().toLocaleTimeString();
         output.innerHTML += `\n[${timestamp}] ${message}`;
         output.scrollTop = output.scrollHeight;
+      }
+
+      function setActiveView(element, view) {
+        document.querySelectorAll(".toggle-btn").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        element.classList.add("active");
+
+        const selectPrompt = document.querySelector(".select-prompt h2");
+        if (selectPrompt) {
+          selectPrompt.textContent =
+            view === "groups" ? "Select a Group to View its Members" : "Select a User to View their Folders";
+        }
+
+        logOutput(`Switching to ${view} view...`);
       }
     </script>
   </body>
