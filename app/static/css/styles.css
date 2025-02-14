@@ -113,6 +113,7 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  gap: 8px;
 }
 
 .content-menu {
@@ -121,6 +122,8 @@ body {
   border-bottom: 1px solid #ddd;
   display: flex;
   gap: 8px;
+  height: 40px;
+  align-items: center;
 }
 
 .content-top,
@@ -128,12 +131,12 @@ body {
   padding: 20px;
   background: white;
   overflow-y: auto;
-  height: calc(50% - 5px);
+  flex: 1;
   box-sizing: border-box;
 }
 
 .content-top {
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 /* ===== User Items ===== */

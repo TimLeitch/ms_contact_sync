@@ -39,9 +39,10 @@
       </div>
       <div class="content-wrapper">
         <div class="section-container">
+          <!-- Top Menu-->
           <div class="content-menu">
-            <button class="menu-btn" onclick="logOutput('Adding to sync list...')">Add to Sync</button>
-            <button class="menu-btn" onclick="logOutput('Removing from sync list...')">Remove</button>
+            <button class="menu-btn" onclick="logOutput('Add contact clicked...')">Add Contact</button>
+            <button class="menu-btn" onclick="logOutput('Remove contact clicked...')">Remove Contact</button>
           </div>
           <div class="content-top" id="info">
             <h2>Current Sync List</h2>
@@ -49,6 +50,7 @@
         </div>
 
         <div class="section-container">
+          <!-- Bottom Menu-->
           <div class="content-menu">
             <button class="menu-btn" onclick="logOutput('Starting sync...')" hx-post="/api/sync" hx-target="#details">
               Sync Selected
