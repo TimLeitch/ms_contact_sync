@@ -1,7 +1,11 @@
-fastapi_msal[full]
+fastapi
 python-multipart
 jinja2
 uvicorn
 httpx
+pyjwt[crypto]
+aiohttp
+asyncio
+sqlalchemy
 
 

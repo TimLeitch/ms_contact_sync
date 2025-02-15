@@ -1,0 +1,23 @@
+<div class="contact-card" id="contact-{{ contact.id }}">
+  <div class="contact-header">
+    <h3>{{ contact.display_name }}</h3>
+    <button
+      class="delete-btn"
+      hx-delete="/contacts/{{ contact.id }}"
+      hx-confirm="Are you sure you want to delete this contact?"
+      hx-target="#contact-{{ contact.id }}"
+      hx-swap="outerHTML"
+    >
+      Delete
+    </button>
+  </div>
+  <div class="contact-details">
+    {% if contact.email %}
+    <div class="detail">
+      <span class="label">Email:</span>
+      <span class="value">{{ contact.email }}</span>
+    </div>
+    {% endif %}
+    <!-- Add other fields similarly -->
+  </div>
+</div>

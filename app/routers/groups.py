@@ -3,7 +3,8 @@ import httpx
 from typing import Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from app.dependencies import auth, config, templates, AuthToken
+from app.dependencies import templates
+from app.auth.certificate_auth import get_access_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["groups"])
@@ -19,14 +20,14 @@ def chunk_list(lst, chunk_size):
 @router.get("/groups", response_class=HTMLResponse)
 async def get_groups(request: Request):
     try:
-        token: Optional[AuthToken] = await auth.get_session_token(request=request)
-        if not token or not token.access_token:
-            return RedirectResponse(url=config.login_path)
+        access_token = await get_access_token()
+        if not access_token:
+            return HTMLResponse("Authentication failed", status_code=401)
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(
                 "https://graph.microsoft.com/v1.0/groups",
-                headers={"Authorization": "Bearer " + token.access_token},
+                headers={"Authorization": "Bearer " + access_token},
                 params={
                     "$select": "displayName,id",
                 }
@@ -62,7 +63,7 @@ async def get_groups(request: Request):
                     batch_resp = await client.post(
                         "https://graph.microsoft.com/v1.0/$batch",
                         headers={
-                            "Authorization": "Bearer " + token.access_token,
+                            "Authorization": "Bearer " + access_token,
                         },
                         json={"requests": batch_chunk},
                         timeout=30.0  # Explicit timeout for batch request
@@ -127,15 +128,15 @@ async def get_groups(request: Request):
 @router.get("/groups/{group_id}/members", response_class=HTMLResponse)
 async def get_group_members(request: Request, group_id: str):
     try:
-        token: Optional[AuthToken] = await auth.get_session_token(request=request)
-        if not token or not token.access_token:
-            return RedirectResponse(url=config.login_path)
+        access_token = await get_access_token()
+        if not access_token:
+            return HTMLResponse("Authentication failed", status_code=401)
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"https://graph.microsoft.com/v1.0/groups/{group_id}/members",
                 headers={
-                    "Authorization": "Bearer " + token.access_token,
+                    "Authorization": "Bearer " + access_token,
                     "ConsistencyLevel": "eventual"
                 },
                 params={

@@ -1,4 +1,4 @@
 """Initialize app package"""
-from .dependencies import auth, config, templates, AuthToken
+from .dependencies import templates
 
-__all__ = ["auth", "config", "templates", "AuthToken"]
+__all__ = ["templates"]

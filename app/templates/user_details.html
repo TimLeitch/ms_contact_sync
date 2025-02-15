@@ -1,0 +1,138 @@
+<div class="user-details">
+  <div class="folders-section">
+    <h3>Contact Folders</h3>
+    <div class="folders-list">
+      {% for folder in folders %}
+      <div class="folder-item">
+        <span class="folder-name">{{ folder.displayName }}</span>
+        <span class="folder-count">({{ folder.totalContactCount if folder.totalContactCount else 0 }} contacts)</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="contacts-section">
+    <h3>Recent Contacts</h3>
+    <div class="contacts-list">
+      {% for contact in contacts[:5] %}
+      <div class="contact-item">
+        <span class="contact-name">{{ contact.displayName }}</span>
+        {% if contact.emailAddresses %}
+        <span class="contact-email">{{ contact.emailAddresses[0].address }}</span>
+        {% endif %} {% if contact.businessPhones %}
+        <span class="contact-phone">{{ contact.businessPhones[0] }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if debug_info %}
+  <div class="debug-section">
+    <h3>Debug Information</h3>
+    <div class="debug-contacts">
+      <h4>Recent Contacts Location:</h4>
+      {% for contact in debug_info.recent_contacts_with_folders %}
+      <div class="debug-item">
+        <span class="debug-name">{{ contact.displayName }}</span>
+        <span class="debug-folder">Folder: {{ contact.folderName }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="debug-folders">
+      <h4>All Folders:</h4>
+      {% for folder in debug_info.all_folders %}
+      <div class="debug-item">
+        <span class="debug-name">{{ folder.displayName }}</span>
+        <span class="debug-count">Count: {{ folder.totalContactCount|default(0) }}</span>
+        <span class="debug-id">ID: {{ folder.id }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .user-details {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .folders-section,
+  .contacts-section {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 15px;
+  }
+
+  .folders-list,
+  .contacts-list {
+    margin-top: 10px;
+  }
+
+  .folder-item,
+  .contact-item {
+    background: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .folder-name,
+  .contact-name {
+    font-weight: bold;
+    display: block;
+  }
+
+  .folder-count {
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .contact-email,
+  .contact-phone {
+    display: block;
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .debug-section {
+    grid-column: 1 / -1;
+    background: #f0f0f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+  }
+
+  .debug-contacts,
+  .debug-folders {
+    margin-top: 15px;
+  }
+
+  .debug-item {
+    background: white;
+    padding: 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .debug-name {
+    font-weight: bold;
+  }
+
+  .debug-folder,
+  .debug-count,
+  .debug-id {
+    color: #666;
+    font-size: 0.9em;
+  }
+</style>

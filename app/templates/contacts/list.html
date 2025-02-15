@@ -1,0 +1,15 @@
+<div class="contacts-grid">{% for contact in contacts %} {% include "contacts/contact_row.html" %} {% endfor %}</div>
+
+<div id="contact-modal" class="modal">
+  <div class="modal-content">
+    <form hx-post="/contacts/add/local" hx-target=".contacts-grid" hx-swap="beforeend">
+      <input type="text" name="display_name" placeholder="Display Name" required />
+      <input type="email" name="email" placeholder="Email" />
+      <input type="tel" name="business_phone" placeholder="Business Phone" />
+      <input type="tel" name="mobile_phone" placeholder="Mobile Phone" />
+      <input type="text" name="job_title" placeholder="Job Title" />
+      <input type="text" name="office_location" placeholder="Office" />
+      <button type="submit">Save Contact</button>
+    </form>
+  </div>
+</div>

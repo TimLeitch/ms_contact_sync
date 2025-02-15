@@ -40,3 +40,9 @@ FastAPI + HTMX application for syncing Microsoft contacts.
    ```
 
 > **Note:** While the above instructions are for local development, in production the application should be run using Docker. Docker deployment instructions will be provided soon.
+
+# Generate private key and certificate
+openssl req -x509 -newkey rsa:4096 -keyout private.key -out cert.pem -days 365 -nodes -subj "/CN=your-app-name"
+
+# Convert certificate to base64 (needed for Azure AD)
+openssl base64 -in cert.pem -out cert.base64 -A

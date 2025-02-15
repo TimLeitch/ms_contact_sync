@@ -2,12 +2,10 @@
 <ul>
   {% for user in users %}
   <li
-    hx-get="/api/users/{{ user.id }}/folders"
+    hx-get="/api/users/{{ user.id }}/details"
     hx-target="#details"
     hx-trigger="click"
     class="user-item"
-    onmouseover="showUserPopup(this, '{{ user.id }}')"
-    onmouseout="hideUserPopup(this)"
     onclick="handleUserClick(this, '{{ user.id }}')"
   >
     <div class="user-info">
@@ -16,51 +14,16 @@
       <span class="user-phone">Mobile: {{ user.mobilePhone if user.mobilePhone else 'N/A' }}</span>
       <span class="user-phone">Business: {{ user.businessPhones[0] if user.businessPhones else 'N/A' }}</span>
     </div>
-    <div class="user-popup" id="popup-{{ user.id }}">
-      <div class="popup-content">
-        <div class="popup-header">
-          <h4>{{ user.displayName }}</h4>
-          <button onclick="closePopup(event, '{{ user.id }}')" class="close-btn">&times;</button>
-        </div>
-        <div class="popup-body" hx-get="/api/users/{{ user.id }}/details" hx-trigger="load"></div>
-      </div>
-    </div>
   </li>
   {% endfor %}
 </ul>
 
 <script>
-  function showUserPopup(element, userId) {
-    if (!element.querySelector(".user-popup").classList.contains("active")) {
-      element.querySelector(".user-popup").classList.add("preview");
-    }
-  }
-
-  function hideUserPopup(element) {
-    if (!element.querySelector(".user-popup").classList.contains("active")) {
-      element.querySelector(".user-popup").classList.remove("preview");
-    }
-  }
-
   function handleUserClick(element, userId) {
-    setActiveUser(element);
-    const popup = element.querySelector(".user-popup");
-    popup.classList.remove("preview");
-    popup.classList.add("active");
-  }
-
-  function closePopup(event, userId) {
-    event.stopPropagation();
-    const popup = document.getElementById(`popup-${userId}`);
-    popup.classList.remove("active");
-  }
-
-  function setActiveUser(element) {
     document.querySelectorAll(".user-item").forEach((el) => {
       el.classList.remove("active");
     });
     element.classList.add("active");
-    logOutput(`Loading contacts for ${element.querySelector(".user-name").textContent}...`);
   }
 </script>
 

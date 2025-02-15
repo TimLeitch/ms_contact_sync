@@ -67,3 +67,8 @@ temp/
 *.env
 .env.*
 !.env.example
+
+# Private key and certificate
+private.key
+cert.pem
+cert.base64
