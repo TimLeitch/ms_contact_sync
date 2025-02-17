@@ -169,7 +169,10 @@ async def add_gal_contacts(request: Request, db: Session = Depends(get_db)):
 
     contacts = db.query(Contact).order_by(Contact.display_name).all()
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "contacts/list.html",
         {"request": request, "contacts": contacts}
     )
+    # Add HX-Trigger header to close modal
+    response.headers["HX-Trigger"] = "closeModal"
+    return response

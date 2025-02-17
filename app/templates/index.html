@@ -99,6 +99,11 @@ Waiting for user interaction...
 
         logOutput(`Switching to ${view} view...`);
       }
+
+      document.body.addEventListener("closeModal", function (evt) {
+        const modal = document.querySelector("#contact-modal");
+        modal.classList.remove("show");
+      });
     </script>
   </body>
 </html>
