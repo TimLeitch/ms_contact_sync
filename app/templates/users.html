@@ -2,7 +2,7 @@
 <ul>
   {% for user in users %}
   <li
-    hx-get="/api/users/{{ user.id }}/details"
+    hx-get="/users/{{ user.id }}/details"
     hx-target="#details"
     hx-trigger="click"
     class="user-item"

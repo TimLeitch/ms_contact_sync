@@ -18,7 +18,7 @@
         <div class="view-toggle">
           <button
             class="toggle-btn active"
-            hx-get="/api/users"
+            hx-get="/users"
             hx-target="#sidebar-content"
             hx-trigger="click"
             onclick="setActiveView(this, 'users')"
@@ -27,7 +27,7 @@
           </button>
           <button
             class="toggle-btn"
-            hx-get="/api/groups"
+            hx-get="/groups"
             hx-target="#sidebar-content"
             hx-trigger="click"
             onclick="setActiveView(this, 'groups')"
@@ -35,26 +35,28 @@
             Groups
           </button>
         </div>
-        <div id="sidebar-content" hx-get="/api/users" hx-trigger="load"></div>
+        <div id="sidebar-content" hx-get="/users" hx-trigger="load"></div>
       </div>
       <div class="content-wrapper">
         <div class="section-container">
           <!-- Top Menu-->
           <div class="content-menu">
-            <button class="menu-btn" onclick="logOutput('Add contact clicked...')">Add Contact</button>
-            <button class="menu-btn" onclick="logOutput('Remove contact clicked...')">Remove Contact</button>
+            <button class="menu-btn" hx-get="/contacts/add/local" hx-target="#contact-modal">Add Contact</button>
+            <button class="menu-btn" hx-get="/contacts/add/csv" hx-target="#contact-modal">Add from CSV</button>
+            <button class="menu-btn" hx-get="/contacts/add/gal" hx-target="#contact-modal">Add from GAL</button>
           </div>
           <div class="content-top" id="info">
-            <h2>Current Sync List</h2>
+            <h2>Contact List</h2>
+            <div id="contact-list" class="contact-grid">
+              <!-- Contact cards will be loaded here -->
+            </div>
           </div>
         </div>
 
         <div class="section-container">
           <!-- Bottom Menu-->
           <div class="content-menu">
-            <button class="menu-btn" onclick="logOutput('Starting sync...')" hx-post="/api/sync" hx-target="#details">
-              Sync Selected
-            </button>
+            <button class="menu-btn" hx-post="/contacts/sync" hx-target="#details">Sync Selected</button>
             <button class="menu-btn" onclick="logOutput('Clearing selection...')">Clear Selection</button>
           </div>
           <div class="content-bottom" id="details">
@@ -72,6 +74,8 @@ Application started...
 Waiting for user interaction...
       </pre>
     </div>
+
+    <div id="contact-modal" class="modal"></div>
 
     <script>
       function logOutput(message) {

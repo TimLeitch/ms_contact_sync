@@ -1,0 +1,70 @@
+<div class="modal-content">
+  <h3>Add Local Contact</h3>
+  <form
+    hx-post="/contacts/add/local"
+    hx-target="#contact-list"
+    hx-swap="beforeend"
+    hx-on::after-request="this.closest('.modal').classList.remove('show')"
+  >
+    <div class="form-section">
+      <div class="form-group">
+        <label for="display_name">Display Name*</label>
+        <input type="text" name="display_name" id="display_name" required />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address*</label>
+        <input type="email" name="email" id="email" required />
+      </div>
+
+      <div class="form-group">
+        <label for="given_name">First Name</label>
+        <input type="text" name="given_name" id="given_name" />
+      </div>
+
+      <div class="form-group">
+        <label for="surname">Last Name</label>
+        <input type="text" name="surname" id="surname" />
+      </div>
+
+      <div class="form-group">
+        <label for="job_title">Job Title</label>
+        <input type="text" name="job_title" id="job_title" />
+      </div>
+
+      <div class="form-group">
+        <label for="company_name">Company</label>
+        <input type="text" name="company_name" id="company_name" />
+      </div>
+
+      <div class="form-group">
+        <label for="department">Department</label>
+        <input type="text" name="department" id="department" />
+      </div>
+
+      <div class="form-group">
+        <label for="business_phones">Business Phone</label>
+        <input type="tel" name="business_phones" id="business_phones" />
+      </div>
+
+      <div class="form-group">
+        <label for="mobile_phone">Mobile Phone</label>
+        <input type="tel" name="mobile_phone" id="mobile_phone" />
+      </div>
+
+      <div class="form-group">
+        <label for="office_location">Office Location</label>
+        <input type="text" name="office_location" id="office_location" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Add Contact</button>
+      <button type="button" class="btn" hx-get="/contacts/close-modal" hx-target="#contact-modal">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.getElementById("contact-modal").classList.add("show");
+</script>

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 from app.db.database import Base
+from datetime import datetime
 
 
 class Contact(Base):
@@ -8,14 +9,15 @@ class Contact(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     display_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
     given_name = Column(String)
     surname = Column(String)
-    email = Column(String)
-    business_phone = Column(String)
-    mobile_phone = Column(String)
     job_title = Column(String)
-    office_location = Column(String)
+    company_name = Column(String)
     department = Column(String)
-    company = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    business_phones = Column(String)
+    mobile_phone = Column(String)
+    office_location = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)

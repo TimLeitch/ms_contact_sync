@@ -3,7 +3,7 @@
   {% for group in groups %}
   <li
     class="user-item"
-    hx-get="/api/groups/{{ group.id }}/members"
+    hx-get="/groups/{{ group.id }}/members"
     hx-target="#details"
     onclick="setActiveGroup(this, '{{ group.displayName }}')"
   >

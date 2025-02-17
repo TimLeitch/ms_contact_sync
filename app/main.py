@@ -8,8 +8,10 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from fastapi.responses import RedirectResponse, HTMLResponse
 from app.dependencies import templates
-from app.routers import users, groups
+from app.routers import users, groups, contacts
 from app.auth.certificate_auth import get_access_token
+from app.db.database import engine
+from app.models.contact import Base
 
 # Load .env file BEFORE any other imports
 load_dotenv()
@@ -24,6 +26,10 @@ app.add_middleware(SessionMiddleware,
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(users.router)
 app.include_router(groups.router)
+app.include_router(contacts.router)
+
+# Create tables
+Base.metadata.create_all(bind=engine)
 
 
 @app.get("/", response_class=HTMLResponse)

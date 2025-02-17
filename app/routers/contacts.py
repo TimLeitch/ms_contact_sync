@@ -18,17 +18,34 @@ async def get_contacts(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/add/local")
+async def show_local_contact_form(request: Request):
+    return templates.TemplateResponse(
+        "contacts/add_local_form.html",
+        {"request": request}
+    )
+
+
 @router.post("/add/local")
 async def add_local_contact(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     contact = Contact(
         display_name=form.get("display_name"),
         email=form.get("email"),
-        # ... other fields
+        given_name=form.get("given_name"),
+        surname=form.get("surname"),
+        job_title=form.get("job_title"),
+        company_name=form.get("company_name"),
+        department=form.get("department"),
+        business_phones=form.get("business_phones"),
+        mobile_phone=form.get("mobile_phone"),
+        office_location=form.get("office_location")
     )
     db.add(contact)
     db.commit()
+    db.refresh(contact)
 
+    # Return just the new row
     return templates.TemplateResponse(
         "contacts/contact_row.html",
         {"request": request, "contact": contact}
@@ -64,3 +81,8 @@ async def delete_contact(contact_id: int, db: Session = Depends(get_db)):
     db.delete(contact)
     db.commit()
     return {"success": True}
+
+
+@router.get("/close-modal")
+async def close_modal():
+    return ""  # Empty response to clear the modal

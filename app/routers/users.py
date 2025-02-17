@@ -7,10 +7,10 @@ from app.auth.certificate_auth import get_access_token
 import asyncio
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api", tags=["users"])
+router = APIRouter(prefix="/users")
 
 
-@router.get("/users", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
 async def get_users(request: Request):
     try:
         access_token = await get_access_token()
@@ -48,7 +48,7 @@ async def get_users(request: Request):
         return HTMLResponse(content="Server error", status_code=500)
 
 
-@router.get("/users/{user_id}/details", response_class=HTMLResponse)
+@router.get("/{user_id}/details", response_class=HTMLResponse)
 async def get_user_details(request: Request, user_id: str):
     try:
         access_token = await get_access_token()

@@ -7,7 +7,7 @@ from app.dependencies import templates
 from app.auth.certificate_auth import get_access_token
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api", tags=["groups"])
+router = APIRouter(prefix="/groups")
 
 
 def chunk_list(lst, chunk_size):
@@ -17,7 +17,7 @@ def chunk_list(lst, chunk_size):
         yield lst[i:i + chunk_size]
 
 
-@router.get("/groups", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
 async def get_groups(request: Request):
     try:
         access_token = await get_access_token()
@@ -125,7 +125,7 @@ async def get_groups(request: Request):
         return HTMLResponse(content=f"Server error: {str(e)}", status_code=500)
 
 
-@router.get("/groups/{group_id}/members", response_class=HTMLResponse)
+@router.get("/{group_id}/members", response_class=HTMLResponse)
 async def get_group_members(request: Request, group_id: str):
     try:
         access_token = await get_access_token()
