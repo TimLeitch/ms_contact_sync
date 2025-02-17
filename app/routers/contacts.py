@@ -9,6 +9,7 @@ from app.auth.certificate_auth import get_access_token
 import httpx
 from fastapi.responses import HTMLResponse
 import logging
+import json
 
 router = APIRouter(prefix="/contacts")
 
@@ -134,6 +135,7 @@ async def add_gal_contacts(request: Request, db: Session = Depends(get_db)):
         return HTMLResponse("Authentication failed", status_code=401)
 
     added_contacts = []
+    skipped_contacts = []
     async with httpx.AsyncClient() as client:
         for user_id in user_ids:
             resp = await client.get(
@@ -146,13 +148,22 @@ async def add_gal_contacts(request: Request, db: Session = Depends(get_db)):
 
             if resp.status_code == 200:
                 user_data = resp.json()
-                # Safely get the first business phone or None
+                email = user_data.get("mail")
+                display_name = user_data.get("displayName")
+
+                # Skip if contact with this email already exists
+                existing_contact = db.query(Contact).filter(
+                    Contact.email == email).first()
+                if existing_contact:
+                    skipped_contacts.append(display_name)
+                    continue
+
                 business_phones = user_data.get("businessPhones", [])
                 business_phone = business_phones[0] if business_phones else None
 
                 contact = Contact(
-                    display_name=user_data.get("displayName"),
-                    email=user_data.get("mail"),
+                    display_name=display_name,
+                    email=email,
                     given_name=user_data.get("givenName"),
                     surname=user_data.get("surname"),
                     job_title=user_data.get("jobTitle"),
@@ -167,14 +178,28 @@ async def add_gal_contacts(request: Request, db: Session = Depends(get_db)):
 
     db.commit()
 
+    # Get all contacts in sorted order
     contacts = db.query(Contact).order_by(Contact.display_name).all()
 
     response = templates.TemplateResponse(
-        "contacts/list.html",
+        "contacts/contact_row.html",
         {"request": request, "contacts": contacts}
     )
-    # Add HX-Trigger header to close modal
     response.headers["HX-Trigger"] = "closeModal"
+
+    # Add messages for the output log
+    messages = []
+    if added_contacts:
+        messages.append(f"Added {len(added_contacts)} new contacts")
+    if skipped_contacts:
+        messages.append(
+            f"Skipped {len(skipped_contacts)} existing contacts: {', '.join(skipped_contacts)}")
+
+    if messages:
+        response.headers["HX-Trigger-After-Settle"] = json.dumps({
+            "showMessage": " | ".join(messages)
+        })
+
     return response
 
 

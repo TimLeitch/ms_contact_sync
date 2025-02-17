@@ -5,6 +5,7 @@
     id="contact-{{ contact.id }}"
     hx-get="/contacts/{{ contact.id }}/edit"
     hx-target="#contact-modal"
+    hx-trigger="click"
   >
     <div class="contact-header">
       <h3>{{ contact.display_name }}</h3>
@@ -14,6 +15,7 @@
         hx-target="#contact-{{ contact.id }}"
         hx-swap="outerHTML"
         hx-confirm="Are you sure?"
+        onclick="event.stopPropagation()"
       >
         ×
       </button>
