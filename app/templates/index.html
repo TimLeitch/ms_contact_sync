@@ -104,6 +104,18 @@ Waiting for user interaction...
         const modal = document.querySelector("#contact-modal");
         modal.classList.remove("show");
       });
+
+      document.body.addEventListener("htmx:afterSettle", function (evt) {
+        if (evt.detail.target.id === "contact-modal") {
+          evt.detail.target.classList.add("show");
+        }
+      });
+
+      document.getElementById("contact-modal").addEventListener("click", function (evt) {
+        if (evt.target === this) {
+          this.classList.remove("show");
+        }
+      });
     </script>
   </body>
 </html>

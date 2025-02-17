@@ -1,6 +1,11 @@
 <div id="contacts-list" class="contacts-grid">
   {% for contact in contacts %}
-  <div class="contact-card" id="contact-{{ contact.id }}">
+  <div
+    class="contact-card"
+    id="contact-{{ contact.id }}"
+    hx-get="/contacts/{{ contact.id }}/edit"
+    hx-target="#contact-modal"
+  >
     <div class="contact-header">
       <h3>{{ contact.display_name }}</h3>
       <button

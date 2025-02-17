@@ -176,3 +176,28 @@ async def add_gal_contacts(request: Request, db: Session = Depends(get_db)):
     # Add HX-Trigger header to close modal
     response.headers["HX-Trigger"] = "closeModal"
     return response
+
+
+@router.get("/{contact_id}/edit")
+async def edit_contact_form(contact_id: int, request: Request, db: Session = Depends(get_db)):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    return templates.TemplateResponse(
+        "contacts/edit_form.html",
+        {"request": request, "contact": contact}
+    )
+
+
+@router.put("/{contact_id}")
+async def update_contact(contact_id: int, request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+
+    for field in form:
+        setattr(contact, field, form[field])
+
+    db.commit()
+
+    return templates.TemplateResponse(
+        "contacts/contact_row.html",
+        {"request": request, "contacts": [contact]}
+    )

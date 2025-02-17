@@ -1,59 +1,79 @@
-<div class="modal-content">
-  <h3>Add Contacts from Global Address List</h3>
-
-  <div class="filter-section">
+<div class="modal-content gal-modal">
+  <div class="modal-header">
+    <h2>Add from Global Address List</h2>
+    <button class="close-btn" hx-get="/contacts/close-modal" hx-target="#contact-modal">×</button>
+  </div>
+  <form hx-post="/contacts/add/gal" hx-target="#contact-list">
     <div class="filter-controls">
-      <input type="text" id="title-filter" placeholder="Filter by Title" class="filter-input" />
-      <input type="text" id="department-filter" placeholder="Filter by Department" class="filter-input" />
-      <input type="text" id="office-filter" placeholder="Filter by Office" class="filter-input" />
-      <select id="phone-filter" class="filter-input">
-        <option value="any">Any Phone Status</option>
-        <option value="has">Has Phone Number</option>
-        <option value="none">No Phone Number</option>
+      <select id="department-filter" onchange="filterGalUsers()">
+        <option value="">All Departments</option>
+        {% set departments = [] %} {% for user in users %} {% if user.department and user.department not in departments
+        %} {% set _ = departments.append(user.department) %} {% endif %} {% endfor %} {% for dept in departments|sort %}
+        <option value="{{ dept }}">{{ dept }}</option>
+        {% endfor %}
       </select>
-      <button onclick="applyFilters()" class="btn btn-secondary">Apply Filters</button>
-    </div>
-  </div>
 
-  <div class="gal-controls">
-    <label class="checkbox-container">
-      <input type="checkbox" id="select-all" onclick="toggleAllUsers()" />
-      <span class="checkbox-label">Select All</span>
-    </label>
-    <button type="button" class="btn btn-primary" onclick="addSelectedUsers()">Add Selected</button>
-    <button type="button" class="btn" hx-get="/contacts/close-modal" hx-target="#contact-modal">Cancel</button>
-  </div>
+      <select id="title-filter" onchange="filterGalUsers()">
+        <option value="">All Titles</option>
+        {% set titles = [] %} {% for user in users %} {% if user.jobTitle and user.jobTitle not in titles %} {% set _ =
+        titles.append(user.jobTitle) %} {% endif %} {% endfor %} {% for title in titles|sort %}
+        <option value="{{ title }}">{{ title }}</option>
+        {% endfor %}
+      </select>
 
-  <div class="gal-list">
-    {% for user in users %}
-    <div
-      class="gal-item"
-      data-title="{{ user.jobTitle|lower }}"
-      data-department="{{ user.department|lower }}"
-      data-office="{{ user.officeLocation|lower }}"
-      data-has-phone="{{ 'true' if user.businessPhones or user.mobilePhone else 'false' }}"
-    >
-      <label class="checkbox-container">
-        <input type="checkbox" name="selected_users" value="{{ user.id }}" class="user-checkbox" />
-        <div class="user-info">
-          <span class="user-name">{{ user.displayName }}</span>
-          <span class="user-email">{{ user.userPrincipalName }}</span>
-          {% if user.jobTitle %}
-          <span class="user-title">{{ user.jobTitle }}</span>
-          {% endif %} {% if user.department %}
-          <span class="user-department">{{ user.department }}</span>
-          {% endif %} {% if user.officeLocation %}
-          <span class="user-office">{{ user.officeLocation }}</span>
-          {% endif %} {% if user.businessPhones %}
-          <span class="user-phone">{{ user.businessPhones[0] }}</span>
-          {% endif %} {% if user.mobilePhone %}
-          <span class="user-mobile">{{ user.mobilePhone }}</span>
-          {% endif %}
-        </div>
+      <label class="checkbox-filter">
+        <input type="checkbox" id="has-phone" onchange="filterGalUsers()" />
+        Has Phone Number
       </label>
+
+      <div class="selection-controls">
+        <button type="button" class="btn-link" onclick="selectAllVisible()">Select All Visible</button>
+        <button type="button" class="btn-link" onclick="unselectAll()">Unselect All</button>
+      </div>
     </div>
-    {% endfor %}
-  </div>
+
+    <div class="gal-list">
+      {% for user in users %}
+      <div
+        class="gal-user-card"
+        data-department="{{ user.department or '' }}"
+        data-title="{{ user.jobTitle or '' }}"
+        data-has-phone="{{ 'true' if user.businessPhones or user.mobilePhone else 'false' }}"
+      >
+        <div class="gal-user-select">
+          <input type="checkbox" id="user-{{ user.id }}" name="user_ids" value="{{ user.id }}" />
+        </div>
+        <div class="gal-user-info">
+          <label for="user-{{ user.id }}" class="gal-user-name">{{ user.displayName }}</label>
+          <div class="gal-user-details">
+            {% if user.jobTitle %}
+            <div class="detail"><span class="label">Title:</span> {{ user.jobTitle }}</div>
+            {% endif %} {% if user.department %}
+            <div class="detail"><span class="label">Department:</span> {{ user.department }}</div>
+            {% endif %} {% if user.businessPhones %}
+            <div class="detail"><span class="label">Business:</span> {{ user.businessPhones[0] }}</div>
+            {% endif %} {% if user.mobilePhone %}
+            <div class="detail"><span class="label">Mobile:</span> {{ user.mobilePhone }}</div>
+            {% endif %} {% if user.officeLocation %}
+            <div class="detail"><span class="label">Office:</span> {{ user.officeLocation }}</div>
+            {% endif %}
+            <div class="detail"><span class="label">Email:</span> {{ user.userPrincipalName }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn-secondary"
+        onclick="document.getElementById('contact-modal').classList.remove('show')"
+      >
+        Cancel
+      </button>
+      <button type="submit" class="btn-primary">Add Selected Contacts</button>
+    </div>
+  </form>
 </div>
 
 <script>
@@ -110,6 +130,39 @@
 
     // Uncheck "select all" when filters change
     document.getElementById("select-all").checked = false;
+  }
+
+  function filterGalUsers() {
+    const departmentFilter = document.getElementById("department-filter").value;
+    const titleFilter = document.getElementById("title-filter").value;
+    const hasPhoneFilter = document.getElementById("has-phone").checked;
+
+    document.querySelectorAll(".gal-user-card").forEach((card) => {
+      const department = card.dataset.department;
+      const title = card.dataset.title;
+      const hasPhone = card.dataset.hasPhone === "true";
+
+      const matchesDepartment = !departmentFilter || department === departmentFilter;
+      const matchesTitle = !titleFilter || title === titleFilter;
+      const matchesPhone = !hasPhoneFilter || hasPhone;
+
+      card.style.display = matchesDepartment && matchesTitle && matchesPhone ? "flex" : "none";
+    });
+  }
+
+  function selectAllVisible() {
+    document.querySelectorAll(".gal-user-card").forEach((card) => {
+      if (card.style.display !== "none") {
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        checkbox.checked = true;
+      }
+    });
+  }
+
+  function unselectAll() {
+    document.querySelectorAll('.gal-user-card input[type="checkbox"]').forEach((checkbox) => {
+      checkbox.checked = false;
+    });
   }
 </script>
 

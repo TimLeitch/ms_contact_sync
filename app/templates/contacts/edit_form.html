@@ -1,0 +1,58 @@
+<div class="modal-content">
+  <div class="modal-header">
+    <h2>Edit Contact</h2>
+    <button class="close-btn" hx-get="/contacts/close-modal" hx-target="#contact-modal">×</button>
+  </div>
+  <form hx-put="/contacts/{{ contact.id }}" hx-target="#contact-{{ contact.id }}" hx-swap="outerHTML">
+    <div class="form-group">
+      <label for="display_name">Display Name</label>
+      <input type="text" id="display_name" name="display_name" value="{{ contact.display_name }}" required />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="given_name">First Name</label>
+        <input type="text" id="given_name" name="given_name" value="{{ contact.given_name }}" />
+      </div>
+      <div class="form-group">
+        <label for="surname">Last Name</label>
+        <input type="text" id="surname" name="surname" value="{{ contact.surname }}" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ contact.email }}" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="business_phones">Business Phone</label>
+        <input type="tel" id="business_phones" name="business_phones" value="{{ contact.business_phones }}" />
+      </div>
+      <div class="form-group">
+        <label for="mobile_phone">Mobile Phone</label>
+        <input type="tel" id="mobile_phone" name="mobile_phone" value="{{ contact.mobile_phone }}" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="job_title">Job Title</label>
+      <input type="text" id="job_title" name="job_title" value="{{ contact.job_title }}" />
+    </div>
+    <div class="form-group">
+      <label for="company_name">Company</label>
+      <input type="text" id="company_name" name="company_name" value="{{ contact.company_name }}" />
+    </div>
+    <div class="form-group">
+      <label for="department">Department</label>
+      <input type="text" id="department" name="department" value="{{ contact.department }}" />
+    </div>
+    <div class="form-group">
+      <label for="office_location">Office Location</label>
+      <input type="text" id="office_location" name="office_location" value="{{ contact.office_location }}" />
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Update Contact</button>
+    </div>
+  </form>
+</div>
+<script>
+  document.getElementById("contact-modal").classList.add("show");
+</script>
