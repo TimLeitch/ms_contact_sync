@@ -1,30 +1,40 @@
-<div class="contact-card" id="contact-{{ contact.id }}">
-  <div class="contact-header">
-    <h3>{{ contact.display_name }}</h3>
-    <button
-      class="delete-btn"
-      hx-delete="/contacts/{{ contact.id }}"
-      hx-target="#contact-{{ contact.id }}"
-      hx-confirm="Are you sure?"
-    >
-      ×
-    </button>
+<div id="contacts-list">
+  {% for contact in contacts %}
+  <div class="contact-card" id="contact-{{ contact.id }}">
+    <div class="contact-header">
+      <h3>{{ contact.display_name }}</h3>
+      <button
+        class="delete-btn"
+        hx-delete="/contacts/{{ contact.id }}"
+        hx-target="#contact-{{ contact.id }}"
+        hx-swap="outerHTML"
+        hx-confirm="Are you sure?"
+      >
+        ×
+      </button>
+    </div>
+    <div class="contact-details">
+      <div class="detail">
+        <span class="label">Email:</span>
+        <span>{{ contact.email }}</span>
+      </div>
+      {% if contact.business_phones %}
+      <div class="detail">
+        <span class="label">Business:</span>
+        <span>{{ contact.business_phones }}</span>
+      </div>
+      {% endif %} {% if contact.mobile_phone %}
+      <div class="detail">
+        <span class="label">Mobile:</span>
+        <span>{{ contact.mobile_phone }}</span>
+      </div>
+      {% endif %} {% if contact.department %}
+      <div class="detail">
+        <span class="label">Department:</span>
+        <span>{{ contact.department }}</span>
+      </div>
+      {% endif %}
+    </div>
   </div>
-  <div class="contact-details">
-    <div class="detail">
-      <span class="label">Email:</span>
-      <span>{{ contact.email }}</span>
-    </div>
-    {% if contact.company_name %}
-    <div class="detail">
-      <span class="label">Company:</span>
-      <span>{{ contact.company_name }}</span>
-    </div>
-    {% endif %} {% if contact.department %}
-    <div class="detail">
-      <span class="label">Department:</span>
-      <span>{{ contact.department }}</span>
-    </div>
-    {% endif %}
-  </div>
+  {% endfor %}
 </div>

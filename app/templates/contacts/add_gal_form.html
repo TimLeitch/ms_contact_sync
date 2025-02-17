@@ -1,0 +1,183 @@
+<div class="modal-content">
+  <h3>Add Contacts from Global Address List</h3>
+
+  <div class="filter-section">
+    <div class="filter-controls">
+      <input type="text" id="title-filter" placeholder="Filter by Title" class="filter-input" />
+      <input type="text" id="department-filter" placeholder="Filter by Department" class="filter-input" />
+      <input type="text" id="office-filter" placeholder="Filter by Office" class="filter-input" />
+      <select id="phone-filter" class="filter-input">
+        <option value="any">Any Phone Status</option>
+        <option value="has">Has Phone Number</option>
+        <option value="none">No Phone Number</option>
+      </select>
+      <button onclick="applyFilters()" class="btn btn-secondary">Apply Filters</button>
+    </div>
+  </div>
+
+  <div class="gal-controls">
+    <label class="checkbox-container">
+      <input type="checkbox" id="select-all" onclick="toggleAllUsers()" />
+      <span class="checkbox-label">Select All</span>
+    </label>
+    <button type="button" class="btn btn-primary" onclick="addSelectedUsers()">Add Selected</button>
+    <button type="button" class="btn" hx-get="/contacts/close-modal" hx-target="#contact-modal">Cancel</button>
+  </div>
+
+  <div class="gal-list">
+    {% for user in users %}
+    <div
+      class="gal-item"
+      data-title="{{ user.jobTitle|lower }}"
+      data-department="{{ user.department|lower }}"
+      data-office="{{ user.officeLocation|lower }}"
+      data-has-phone="{{ 'true' if user.businessPhones or user.mobilePhone else 'false' }}"
+    >
+      <label class="checkbox-container">
+        <input type="checkbox" name="selected_users" value="{{ user.id }}" class="user-checkbox" />
+        <div class="user-info">
+          <span class="user-name">{{ user.displayName }}</span>
+          <span class="user-email">{{ user.userPrincipalName }}</span>
+          {% if user.jobTitle %}
+          <span class="user-title">{{ user.jobTitle }}</span>
+          {% endif %} {% if user.department %}
+          <span class="user-department">{{ user.department }}</span>
+          {% endif %} {% if user.officeLocation %}
+          <span class="user-office">{{ user.officeLocation }}</span>
+          {% endif %} {% if user.businessPhones %}
+          <span class="user-phone">{{ user.businessPhones[0] }}</span>
+          {% endif %} {% if user.mobilePhone %}
+          <span class="user-mobile">{{ user.mobilePhone }}</span>
+          {% endif %}
+        </div>
+      </label>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  document.getElementById("contact-modal").classList.add("show");
+
+  function toggleAllUsers() {
+    const selectAll = document.getElementById("select-all");
+    document.querySelectorAll(".user-checkbox").forEach((checkbox) => {
+      const item = checkbox.closest(".gal-item");
+      if (item.style.display !== "none") {
+        // Only toggle visible items
+        checkbox.checked = selectAll.checked;
+      }
+    });
+  }
+
+  function addSelectedUsers() {
+    const selectedUsers = Array.from(document.querySelectorAll(".user-checkbox:checked")).map((cb) => cb.value);
+
+    if (selectedUsers.length === 0) {
+      logOutput("No users selected");
+      return;
+    }
+
+    logOutput(`Adding ${selectedUsers.length} users from GAL...`);
+
+    htmx.ajax("POST", "/contacts/add/gal", {
+      target: "#contact-list",
+      swap: "beforeend",
+      values: { user_ids: selectedUsers },
+    });
+  }
+
+  function applyFilters() {
+    const titleFilter = document.getElementById("title-filter").value.toLowerCase();
+    const departmentFilter = document.getElementById("department-filter").value.toLowerCase();
+    const officeFilter = document.getElementById("office-filter").value.toLowerCase();
+    const phoneFilter = document.getElementById("phone-filter").value;
+
+    document.querySelectorAll(".gal-item").forEach((item) => {
+      const title = item.dataset.title || "";
+      const department = item.dataset.department || "";
+      const office = item.dataset.office || "";
+      const hasPhone = item.dataset.hasPhone === "true";
+
+      const matchesTitle = !titleFilter || title.includes(titleFilter);
+      const matchesDepartment = !departmentFilter || department.includes(departmentFilter);
+      const matchesOffice = !officeFilter || office.includes(officeFilter);
+      const matchesPhone =
+        phoneFilter === "any" || (phoneFilter === "has" && hasPhone) || (phoneFilter === "none" && !hasPhone);
+
+      item.style.display = matchesTitle && matchesDepartment && matchesOffice && matchesPhone ? "block" : "none";
+    });
+
+    // Uncheck "select all" when filters change
+    document.getElementById("select-all").checked = false;
+  }
+</script>
+
+<style>
+  .filter-section {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    background: white;
+  }
+
+  .filter-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .filter-input {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  .gal-controls {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+  }
+
+  .gal-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  .gal-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .user-title,
+  .user-department,
+  .user-office {
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .user-phone,
+  .user-mobile {
+    color: #666;
+    font-size: 0.9em;
+  }
+</style>

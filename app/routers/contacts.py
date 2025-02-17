@@ -5,15 +5,24 @@ import io
 from app.db.database import get_db
 from app.models.contact import Contact
 from app.dependencies import templates
+from app.auth.certificate_auth import get_access_token
+import httpx
+from fastapi.responses import HTMLResponse
+import logging
 
 router = APIRouter(prefix="/contacts")
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("")
 async def get_contacts(request: Request, db: Session = Depends(get_db)):
-    contacts = db.query(Contact).all()
+    contacts = db.query(Contact).order_by(Contact.display_name).all()
+    # Debug log to verify we're getting contacts
+    logger.info(f"Retrieved {len(contacts)} contacts from database")
+
     return templates.TemplateResponse(
-        "contacts/list.html",
+        "contacts/contact_row.html",
         {"request": request, "contacts": contacts}
     )
 
@@ -43,12 +52,13 @@ async def add_local_contact(request: Request, db: Session = Depends(get_db)):
     )
     db.add(contact)
     db.commit()
-    db.refresh(contact)
 
-    # Return just the new row
+    # Get all contacts in sorted order
+    contacts = db.query(Contact).order_by(Contact.display_name).all()
+
     return templates.TemplateResponse(
         "contacts/contact_row.html",
-        {"request": request, "contact": contact}
+        {"request": request, "contacts": contacts}
     )
 
 
@@ -80,9 +90,86 @@ async def delete_contact(contact_id: int, db: Session = Depends(get_db)):
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     db.delete(contact)
     db.commit()
-    return {"success": True}
+    return HTMLResponse(content="")
 
 
 @router.get("/close-modal")
 async def close_modal():
     return ""  # Empty response to clear the modal
+
+
+@router.get("/add/gal")
+async def show_gal_form(request: Request):
+    access_token = await get_access_token()
+    if not access_token:
+        return HTMLResponse("Authentication failed", status_code=401)
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://graph.microsoft.com/v1.0/users",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "$select": "id,displayName,userPrincipalName,businessPhones,mobilePhone,jobTitle,department,officeLocation",
+                "$top": 999
+            }
+        )
+
+        if resp.status_code != 200:
+            return HTMLResponse("Failed to fetch users", status_code=resp.status_code)
+
+        users = resp.json().get("value", [])
+        return templates.TemplateResponse(
+            "contacts/add_gal_form.html",
+            {"request": request, "users": users}
+        )
+
+
+@router.post("/add/gal")
+async def add_gal_contacts(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    user_ids = form.getlist("user_ids")
+
+    access_token = await get_access_token()
+    if not access_token:
+        return HTMLResponse("Authentication failed", status_code=401)
+
+    added_contacts = []
+    async with httpx.AsyncClient() as client:
+        for user_id in user_ids:
+            resp = await client.get(
+                f"https://graph.microsoft.com/v1.0/users/{user_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={
+                    "$select": "displayName,givenName,surname,jobTitle,companyName,department,businessPhones,mobilePhone,officeLocation,mail"
+                }
+            )
+
+            if resp.status_code == 200:
+                user_data = resp.json()
+                # Safely get the first business phone or None
+                business_phones = user_data.get("businessPhones", [])
+                business_phone = business_phones[0] if business_phones else None
+
+                contact = Contact(
+                    display_name=user_data.get("displayName"),
+                    email=user_data.get("mail"),
+                    given_name=user_data.get("givenName"),
+                    surname=user_data.get("surname"),
+                    job_title=user_data.get("jobTitle"),
+                    company_name=user_data.get("companyName"),
+                    department=user_data.get("department"),
+                    business_phones=business_phone,
+                    mobile_phone=user_data.get("mobilePhone"),
+                    office_location=user_data.get("officeLocation")
+                )
+                db.add(contact)
+                added_contacts.append(contact)
+
+    db.commit()
+
+    contacts = db.query(Contact).order_by(Contact.display_name).all()
+
+    return templates.TemplateResponse(
+        "contacts/list.html",
+        {"request": request, "contacts": contacts}
+    )
